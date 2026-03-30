@@ -13,7 +13,7 @@ app = Flask(__name__)
 # ==============================
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
-TO_EMAIL = os.getenv("TO_EMAIL")  # comma separated
+TO_EMAIL = os.getenv("TO_EMAIL")
 SECRET = os.getenv("SECRET_KEY", "mysecret123")
 
 recipients = [e.strip() for e in TO_EMAIL.split(",")]
@@ -21,7 +21,7 @@ recipients = [e.strip() for e in TO_EMAIL.split(",")]
 URL = "https://www.thehindu.com/latest-news/"
 
 # ==============================
-# GLOBAL RATE LIMIT (1 HOUR)
+# RATE LIMIT (1 HOUR)
 # ==============================
 last_run = None
 
@@ -36,9 +36,13 @@ def get_last_hour_news():
     one_hour_ago = now - timedelta(hours=1)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        browser = p.chromium.launch(
+            executable_path="/usr/bin/chromium",  # ✅ KEY FIX
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"]
+        )
 
+        page = browser.new_page()
         page.goto(URL, timeout=60000)
         page.wait_for_load_state("networkidle")
 
@@ -111,14 +115,14 @@ def home():
 def run_news():
     global last_run
 
-    # 🔐 security
+    # 🔐 SECURITY
     key = request.args.get("key")
     if key != SECRET:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
     now = datetime.now()
 
-    # ⏱ prevent multiple runs within 1 hour
+    # ⏱ RATE LIMIT (1 HOUR)
     if last_run and (now - last_run).seconds < 3600:
         return jsonify({
             "status": "skipped",
@@ -145,9 +149,8 @@ def run_news():
 
 
 # ==============================
-# RUN SERVER
+# RUN SERVER (IMPORTANT FIX)
 # ==============================
-
-port = int(os.environ.get("PORT", 10000))
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
