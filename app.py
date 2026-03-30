@@ -37,10 +37,9 @@ def get_last_hour_news():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            executable_path="/usr/bin/chromium",  # ✅ KEY FIX
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"]
-        )
+    headless=True,
+    args=["--no-sandbox", "--disable-setuid-sandbox"]
+)
 
         page = browser.new_page()
         page.goto(URL, timeout=60000)
@@ -120,7 +119,7 @@ def run_news():
     if key != SECRET:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     # ⏱ RATE LIMIT (1 HOUR)
     if last_run and (now - last_run).seconds < 3600:
